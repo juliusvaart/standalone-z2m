@@ -21,6 +21,44 @@ mqtt://<host>:1883       Mosquitto, for Home Assistant
 | `switchboard` | Rule engine + switch binding UI, internal port 3000 |
 | `portal` | nginx on port 80: landing page and reverse proxy for the two UIs |
 
+## Hardware
+
+Runs on a Raspberry Pi. All four images publish `arm/v6`, `arm/v7`, and `arm64` builds, so the
+architecture is never the limit — RAM, CPU, and storage are.
+
+| Board | Verdict |
+| --- | --- |
+| Pi 4 / Pi 5, 2 GB | Recommended |
+| Pi 3B / 3B+, 1 GB | Sensible minimum, ~600 MB free after the stack |
+| Pi Zero 2 W, 512 MB | Hard floor, with the caveats below |
+| Pi 2 (ARMv7, 32-bit) | Works but slow; only worth it if you already own one |
+| Pi 1 / Zero / Zero W (ARMv6) | No. Node 22 has no usable ARMv6 build |
+
+Idle memory, measured on arm64:
+
+| Service | RAM |
+| --- | --- |
+| `mosquitto` | 2.5 MB |
+| `switchboard` | 27 MB |
+| `portal` | 9 MB |
+| `zigbee2mqtt` | 150-250 MB (estimate, grows with network size) |
+
+That is roughly 200-300 MB for the stack, plus the Docker daemon (50-80 MB) and Raspberry Pi OS
+Lite headless (100-150 MB). Images take about 610 MB of disk.
+
+On a 512 MB board: add swap and build the `switchboard` image on another machine, because
+`npm install` will thrash. The coordinator needs a micro-USB OTG adapter on a Zero 2 W.
+
+Two things that bite regardless of board:
+
+* **Storage.** Zigbee2MQTT's database and Mosquitto's persistence do constant small writes. Boot
+  from an SSD, or use a decent A2 card and expect to replace it.
+* **2.4 GHz interference.** Onboard Wi-Fi sits on top of the Zigbee band. Prefer ethernet, and put
+  the coordinator on a USB extension cable away from the board and from any USB 3 port.
+
+Running Home Assistant on the same Pi changes the answer: 4 GB, Pi 4 or 5. Home Assistant alone
+wants 1-2 GB.
+
 ## Setup
 
 1. Copy the environment file and set the coordinator:
