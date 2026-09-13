@@ -1,0 +1,32 @@
+homeassistant:
+  enabled: true
+
+mqtt:
+  # user/password come from MQTT_USERNAME / MQTT_PASSWORD in .env
+  base_topic: zigbee2mqtt
+  server: mqtt://mosquitto:1883
+
+serial:
+  port: /dev/ttyACM0
+  adapter: zstack
+
+frontend:
+  enabled: true
+  port: 8080
+  # Served behind the portal at http://<host>/z2m/
+  base_url: /z2m
+
+availability:
+  enabled: true
+
+advanced:
+  log_level: info
+  # Keep the modern payload format Home Assistant discovery expects.
+  legacy_api: false
+  legacy_availability_payload: false
+
+# Permit joining only while you are pairing devices.
+permit_join: false
+
+groups: {}
+devices: {}

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Home Portal</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --fg: #16181d;
+    --muted: #5d636e;
+    --line: #dfe2e8;
+    --accent: #3b6fd4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a;
+      --card: #1d2026;
+      --fg: #edeff3;
+      --muted: #9aa1ad;
+      --line: #2c313a;
+      --accent: #6d9bf0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 32px;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { width: 100%; max-width: 760px; }
+  h1 { margin: 0 0 6px; font-size: 28px; }
+  p.sub { margin: 0 0 28px; color: var(--muted); }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  a.card {
+    display: block;
+    padding: 24px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card);
+    color: inherit;
+    text-decoration: none;
+    transition: border-color .15s, transform .15s;
+  }
+  a.card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  a.card h2 { margin: 0 0 6px; font-size: 19px; }
+  a.card p { margin: 0; color: var(--muted); font-size: 14px; }
+  .icon { font-size: 28px; line-height: 1; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Smart Home Portal</h1>
+  <p class="sub">Zigbee2MQTT with Friends of Hue switch bindings.</p>
+  <div class="grid">
+    <a class="card" href="/switches/">
+      <div class="icon">&#128161;</div>
+      <h2>Switchboard</h2>
+      <p>Bind battery switches to Zigbee2MQTT groups, lights or Home Assistant entities. Keeps working when Home Assistant is down.</p>
+    </a>
+    <a class="card" href="/z2m/">
+      <div class="icon">&#128225;</div>
+      <h2>Zigbee2MQTT</h2>
+      <p>Pair devices, build groups, inspect the Zigbee network and device settings.</p>
+    </a>
+  </div>
+</main>
+</body>
+</html>

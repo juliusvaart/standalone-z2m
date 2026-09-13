@@ -1,0 +1,82 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config:ro
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    environment:
+      TZ: ${TZ:-Europe/Berlin}
+      MQTT_USERNAME: ${MQTT_USERNAME:?set MQTT_USERNAME in .env}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:?set MQTT_PASSWORD in .env}
+    command: ["/bin/sh", "/mosquitto/config/entrypoint.sh"]
+    networks: [smarthome]
+
+  zigbee2mqtt:
+    image: ghcr.io/koenkk/zigbee2mqtt:latest
+    container_name: zigbee2mqtt
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+    volumes:
+      - ./zigbee2mqtt/data:/app/data
+      - /run/udev:/run/udev:ro
+    environment:
+      TZ: ${TZ:-Europe/Berlin}
+      ZIGBEE2MQTT_CONFIG_MQTT_SERVER: mqtt://mosquitto:1883
+      ZIGBEE2MQTT_CONFIG_MQTT_USER: ${MQTT_USERNAME:?set MQTT_USERNAME in .env}
+      ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD: ${MQTT_PASSWORD:?set MQTT_PASSWORD in .env}
+      ZIGBEE2MQTT_CONFIG_SERIAL_PORT: ${Z2M_SERIAL_PORT:?set Z2M_SERIAL_PORT in .env}
+      ZIGBEE2MQTT_CONFIG_SERIAL_ADAPTER: ${Z2M_SERIAL_ADAPTER:-zstack}
+    # USB coordinator: uncomment on Linux hosts. Docker Desktop (macOS/Windows) cannot
+    # pass through USB - use a network coordinator instead (tcp://host:port in Z2M_SERIAL_PORT).
+    # devices:
+    #   - ${Z2M_SERIAL_PORT}:${Z2M_SERIAL_PORT}
+    networks: [smarthome]
+
+  switchboard:
+    build: ./switchboard
+    container_name: switchboard
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+    volumes:
+      - ./config:/config
+    environment:
+      TZ: ${TZ:-Europe/Berlin}
+      MQTT_URL: mqtt://mosquitto:1883
+      MQTT_USERNAME: ${MQTT_USERNAME:?set MQTT_USERNAME in .env}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:?set MQTT_PASSWORD in .env}
+      Z2M_BASE_TOPIC: ${Z2M_BASE_TOPIC:-zigbee2mqtt}
+      HA_URL: ${HA_URL:-}
+      HA_TOKEN: ${HA_TOKEN:-}
+      RULES_FILE: /config/rules.json
+    networks: [smarthome]
+
+  portal:
+    image: nginx:alpine
+    container_name: portal
+    restart: unless-stopped
+    depends_on:
+      - zigbee2mqtt
+      - switchboard
+    ports:
+      - "80:80"
+    volumes:
+      - ./portal/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./portal/html:/usr/share/nginx/html:ro
+    environment:
+      TZ: ${TZ:-Europe/Berlin}
+    networks: [smarthome]
+
+volumes:
+  mosquitto-data:
+  mosquitto-log:
+
+networks:
+  smarthome:
+    driver: bridge
