@@ -32,10 +32,11 @@ services:
       ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD: ${MQTT_PASSWORD:?set MQTT_PASSWORD in .env}
       ZIGBEE2MQTT_CONFIG_SERIAL_PORT: ${Z2M_SERIAL_PORT:?set Z2M_SERIAL_PORT in .env}
       ZIGBEE2MQTT_CONFIG_SERIAL_ADAPTER: ${Z2M_SERIAL_ADAPTER:-zstack}
-    # USB coordinator: uncomment on Linux hosts. Docker Desktop (macOS/Windows) cannot
-    # pass through USB - use a network coordinator instead (tcp://host:port in Z2M_SERIAL_PORT).
-    # devices:
-    #   - ${Z2M_SERIAL_PORT}:${Z2M_SERIAL_PORT}
+    # USB coordinator, passed through from the Linux host at the same path inside the
+    # container. Docker Desktop (macOS/Windows) cannot pass through USB, so the stack
+    # only comes up on Linux; use a network coordinator (tcp://host:port) elsewhere.
+    devices:
+      - ${Z2M_SERIAL_PORT:?set Z2M_SERIAL_PORT in .env}:${Z2M_SERIAL_PORT}
     networks: [smarthome]
 
   switchboard:

@@ -67,10 +67,22 @@ wants 1-2 GB.
    cp .env.example .env
    ```
 
-   * Linux with a USB stick: set `Z2M_SERIAL_PORT=/dev/ttyACM0` and uncomment the `devices:` block
-     in `docker-compose.yml`.
-   * macOS or Windows (Docker Desktop): USB passthrough is not available. Use a network coordinator
-     and set `Z2M_SERIAL_PORT=tcp://192.168.1.50:6638`.
+   * Linux with a USB stick: set `Z2M_SERIAL_PORT` to the coordinator's stable device path.
+     Prefer the by-id form, which survives reboots and replugging:
+
+     ```bash
+     ls -l /dev/serial/by-id/
+     # Z2M_SERIAL_PORT=/dev/serial/by-id/usb-ITead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_<serial>-if00-port0
+     ```
+
+     `/dev/ttyACM0` also works but can move to `ttyACM1` if another serial device enumerates
+     first. Compose passes this exact path into the container, so it must exist on the host
+     before `docker compose up` - if `ls` prints nothing, the dongle is not enumerating and
+     no config change will help.
+   * macOS or Windows (Docker Desktop): USB passthrough is not available, so the stack will not
+     start with a USB coordinator. Use a network coordinator and set
+     `Z2M_SERIAL_PORT=tcp://192.168.1.50:6638`, or comment out the `devices:` block in
+     `docker-compose.yml`.
 
 2. Set `MQTT_USERNAME` and `MQTT_PASSWORD` in `.env`. The broker rejects anonymous clients, and
    Compose refuses to start without them.
