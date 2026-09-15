@@ -1,0 +1,26 @@
+{
+	admin off
+	auto_https off
+}
+
+:80 {
+	root * /usr/share/caddy
+
+	# Zigbee2MQTT frontend. Its base_url is /z2m, so the prefix is passed through.
+	# Caddy proxies websockets and re-resolves upstream DNS per request, so the
+	# portal keeps serving while Zigbee2MQTT or the bridge restart.
+	redir /z2m /z2m/ permanent
+	handle /z2m/* {
+		reverse_proxy zigbee2mqtt:8080
+	}
+
+	# Switch binding UI. It serves from its own root, so the prefix is stripped.
+	redir /switches /switches/ permanent
+	handle_path /switches/* {
+		reverse_proxy switchboard:3000
+	}
+
+	handle {
+		file_server
+	}
+}

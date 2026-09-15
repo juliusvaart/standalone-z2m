@@ -19,7 +19,7 @@ mqtt://<host>:1883       Mosquitto, for Home Assistant
 | `mosquitto` | MQTT broker, the only component that is exposed on 1883 |
 | `zigbee2mqtt` | Zigbee coordinator bridge, frontend on internal port 8080 under `/z2m` |
 | `switchboard` | Rule engine + switch binding UI, internal port 3000 |
-| `portal` | nginx on port 80: landing page and reverse proxy for the two UIs |
+| `portal` | Caddy on port 80: landing page and reverse proxy for the two UIs |
 
 ## Hardware
 
@@ -40,7 +40,7 @@ Idle memory, measured on arm64:
 | --- | --- |
 | `mosquitto` | 2.5 MB |
 | `switchboard` | 27 MB |
-| `portal` | 9 MB |
+| `portal` | 30 MB |
 | `zigbee2mqtt` | 150-250 MB (estimate, grows with network size) |
 
 That is roughly 200-300 MB for the stack, plus the Docker daemon (50-80 MB) and Raspberry Pi OS
