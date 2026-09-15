@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import express from 'express';
 import mqtt from 'mqtt';
 import { listRules, replaceRules } from './store.js';
-import { COMMANDS, createExecutor } from './executor.js';
+import { COMMANDS, DIM_COMMANDS, createExecutor } from './executor.js';
 import * as ha from './ha.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -123,6 +123,10 @@ function validate(body) {
   if (kind === 'ha' && !ha.isConfigured()) errors.push('Home Assistant targets need HA_URL and HA_TOKEN');
   if (kind === 'ha' && targetId && !/^(light|switch|group)\./.test(targetId)) {
     errors.push('target.id must be a Home Assistant entity id, e.g. light.kitchen');
+  }
+  // Brightness steps exist only in the light domain; switches and groups cannot dim.
+  if (kind === 'ha' && DIM_COMMANDS.has(command) && targetId && !targetId.startsWith('light.')) {
+    errors.push(`${targetId} is not a light, so it cannot run ${command}`);
   }
 
   const step = body.step === undefined || body.step === null || body.step === '' ? undefined : Number(body.step);

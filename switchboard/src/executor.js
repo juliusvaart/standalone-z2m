@@ -12,6 +12,7 @@ export const COMMANDS = [
 ];
 
 const HOLD_COMMANDS = new Set(['dim_up_hold', 'dim_down_hold']);
+export const DIM_COMMANDS = new Set(['dim_up', 'dim_down', 'dim_up_hold', 'dim_down_hold']);
 const HOLD_INTERVAL_MS = 600;
 // A release event can get lost over the air; never dim forever because of it.
 const HOLD_MAX_MS = 20_000;
@@ -82,15 +83,22 @@ export function createExecutor({ publishSet }) {
 
   function runHomeAssistant(entityId, command, step) {
     const dim = (pct) => ha.callService('light', 'turn_on', { entity_id: entityId, brightness_step_pct: pct });
+    // Only the light domain accepts a light.* entity. Switches and legacy groups go
+    // through the homeassistant domain, which forwards to whatever domain owns them.
+    const domain = entityId.startsWith('light.') ? 'light' : 'homeassistant';
+
+    if (DIM_COMMANDS.has(command) && domain !== 'light') {
+      return Promise.reject(new Error(`${entityId} is not a light, so it cannot dim`));
+    }
 
     switch (command) {
       case 'on':
         // No brightness or colour here: Adaptive Lighting picks the values for this turn_on.
-        return ha.callService('light', 'turn_on', { entity_id: entityId });
+        return ha.callService(domain, 'turn_on', { entity_id: entityId });
       case 'off':
-        return ha.callService('light', 'turn_off', { entity_id: entityId });
+        return ha.callService(domain, 'turn_off', { entity_id: entityId });
       case 'toggle':
-        return ha.callService('light', 'toggle', { entity_id: entityId });
+        return ha.callService(domain, 'toggle', { entity_id: entityId });
       case 'dim_up':
         return dim(step);
       case 'dim_down':
