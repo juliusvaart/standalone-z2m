@@ -87,16 +87,26 @@ wants 1-2 GB.
 2. Set `MQTT_USERNAME` and `MQTT_PASSWORD` in `.env`. The broker rejects anonymous clients, and
    Compose refuses to start without them.
 
-3. Start the stack:
+3. Seed the Zigbee2MQTT config:
+
+   ```bash
+   cp zigbee2mqtt/configuration.example.yaml zigbee2mqtt/data/configuration.yaml
+   ```
+
+   Zigbee2MQTT owns that copy from then on and rewrites it at runtime, folding in the MQTT
+   credentials from `.env` and, after the first pairing, the Zigbee network key. That is why
+   `zigbee2mqtt/data/` is gitignored - never commit it.
+
+4. Start the stack:
 
    ```bash
    docker compose up -d
    ```
 
-4. Open `http://<host>/`, go to Zigbee2MQTT, enable "Permit join", and pair your switches and lights.
+5. Open `http://<host>/`, go to Zigbee2MQTT, enable "Permit join", and pair your switches and lights.
    Groups you create in Zigbee2MQTT show up as targets in the switch UI automatically.
 
-5. Point Home Assistant's MQTT integration at `<host>:1883` with those credentials. Zigbee2MQTT discovery is enabled, so
+6. Point Home Assistant's MQTT integration at `<host>:1883` with those credentials. Zigbee2MQTT discovery is enabled, so
    devices, lights, and groups appear as entities without extra configuration.
 
 ## Binding a switch

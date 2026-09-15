@@ -21,7 +21,7 @@ function markReachable() {
   unreachableUntil = 0;
 }
 
-async function request(path, init = {}) {
+async function request(path, init = {}, { allowMissing = false } = {}) {
   if (!isConfigured()) throw new Error('Home Assistant is not configured (set HA_URL and HA_TOKEN)');
   if (!isReachable()) throw new Error('Home Assistant is unreachable');
 
@@ -49,8 +49,22 @@ async function request(path, init = {}) {
   }
 
   markReachable();
+  if (allowMissing && res.status === 404) return null;
   if (!res.ok) throw new Error(`Home Assistant ${path} responded ${res.status}`);
   return res.json();
+}
+
+// A service call for an entity that does not exist still answers 200, so a typo in a
+// target would silently do nothing forever. The state endpoint does 404, so it is the
+// only way to catch one before the rule is stored. Returns null when Home Assistant
+// cannot be reached, because an outage must not block editing rules.
+export async function entityExists(entityId) {
+  if (!isConfigured()) return null;
+  try {
+    return (await request(`/api/states/${encodeURIComponent(entityId)}`, {}, { allowMissing: true })) !== null;
+  } catch {
+    return null;
+  }
 }
 
 export function callService(domain, service, data) {

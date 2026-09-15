@@ -1,0 +1,29 @@
+# Seed config for Zigbee2MQTT. Copy to zigbee2mqtt/data/configuration.yaml before the
+# first start; Zigbee2MQTT owns that copy afterwards and rewrites it at runtime.
+#
+# No MQTT credentials here on purpose. docker-compose.yml passes them in from .env as
+# ZIGBEE2MQTT_CONFIG_MQTT_USER / _PASSWORD, and Zigbee2MQTT writes the resolved values
+# into data/configuration.yaml - which is why that file must stay out of git.
+homeassistant:
+  enabled: true
+mqtt:
+  base_topic: zigbee2mqtt
+  server: mqtt://mosquitto:1883
+  keepalive: 60
+  reject_unauthorized: true
+  version: 4
+  include_device_information: true
+serial:
+  adapter: zstack
+frontend:
+  enabled: true
+  port: 8080
+  # The portal reverse-proxies /z2m/ with the prefix intact, so this must stay.
+  base_url: /z2m
+availability:
+  enabled: true
+advanced:
+  log_level: info
+groups: {}
+devices: {}
+version: 5

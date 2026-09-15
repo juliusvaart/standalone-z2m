@@ -107,7 +107,7 @@ client.on('message', (topic, buffer) => {
 
 const commandIds = new Set(COMMANDS.map((c) => c.id));
 
-function validate(body) {
+async function validate(body) {
   const errors = [];
   const device = String(body.device || '').trim();
   const action = String(body.action || '').trim();
@@ -137,6 +137,12 @@ function validate(body) {
   if (fallback && /^[a-z_]+\./.test(fallback)) {
     errors.push('fallback must be a Zigbee2MQTT group or light name, not an entity id');
   }
+  // Only worth a round trip once the shape is right.
+  if (!errors.length && kind === 'ha') {
+    const exists = await ha.entityExists(targetId);
+    if (exists === false) errors.push(`${targetId} does not exist in Home Assistant`);
+  }
+
   if (errors.length) return { errors };
 
   return {
@@ -181,19 +187,19 @@ app.get('/api/ha/lights', async (req, res) => {
 
 app.get('/api/rules', (req, res) => res.json(listRules()));
 
-app.post('/api/rules', (req, res) => {
-  const { errors, rule } = validate(req.body || {});
+app.post('/api/rules', async (req, res) => {
+  const { errors, rule } = await validate(req.body || {});
   if (errors) return res.status(400).json({ errors });
   const created = { id: crypto.randomUUID(), ...rule };
   replaceRules([...listRules(), created]);
   res.status(201).json(created);
 });
 
-app.put('/api/rules/:id', (req, res) => {
+app.put('/api/rules/:id', async (req, res) => {
   const rules = listRules();
   const index = rules.findIndex((r) => r.id === req.params.id);
   if (index === -1) return res.status(404).json({ error: 'rule not found' });
-  const { errors, rule } = validate(req.body || {});
+  const { errors, rule } = await validate(req.body || {});
   if (errors) return res.status(400).json({ errors });
   const updated = { id: req.params.id, ...rule };
   const next = [...rules];

@@ -1,4 +1,7 @@
 .env
 node_modules/
+# Zigbee2MQTT owns this directory and rewrites configuration.yaml at runtime, storing
+# the MQTT password and the Zigbee network key in it. Seed a new install from
+# zigbee2mqtt/configuration.example.yaml instead of tracking it.
 zigbee2mqtt/data/*
 config/rules.json
