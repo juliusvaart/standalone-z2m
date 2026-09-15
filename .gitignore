@@ -1,5 +1,5 @@
 .env
 node_modules/
 zigbee2mqtt/data/*
-!zigbee2mqtt/data/configuration.yaml
+zigbee2mqtt/data/configuration.yaml
 config/rules.json
