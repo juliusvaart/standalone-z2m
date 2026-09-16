@@ -14,6 +14,36 @@ http://<host>/z2m/       Zigbee2MQTT frontend
 mqtt://<host>:1883       Mosquitto, for Home Assistant
 ```
 
+## Backups
+
+`scripts/backup.sh` writes a timestamped zip to `backups/`, or to a directory given as the first
+argument:
+
+```
+./scripts/backup.sh              # backups/z2m-backup-20260916-205016.zip
+./scripts/backup.sh /mnt/usb     # somewhere off the SD card
+```
+
+It stops `zigbee2mqtt` first, because the device database is written continuously and
+`coordinator_backup.json` is flushed on shutdown, then starts it again — also when the copy fails.
+A stack that was already stopped stays stopped.
+
+| In the archive | Why |
+| --- | --- |
+| `zigbee2mqtt/data` | Zigbee network key, coordinator backup, paired devices. Logs are skipped |
+| `config` | Switchboard rules |
+| `mosquitto/config` | Broker configuration |
+| `.env` | Credentials, Home Assistant token, serial port |
+
+Mosquitto's persistence volume is left out: it holds retained messages and queued sessions, which
+Zigbee2MQTT republishes on the next start.
+
+The archive holds `.env` and the Zigbee network key in the clear, so it is written `chmod 600` and
+`backups/` is gitignored. Copy it off the Pi — a backup on the card that dies with the card is not
+a backup.
+
+To restore: stop the stack, `unzip -o <archive>` into the repository root, `docker compose up -d`.
+
 ## Services
 
 | Service | Role |
