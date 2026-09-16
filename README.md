@@ -1,11 +1,12 @@
 # Standalone Zigbee2MQTT with Switchboard
 
 Docker Compose stack that runs Zigbee2MQTT, an MQTT broker, and **Switchboard** — a small service
-that binds battery switches and motion sensors to Zigbee2MQTT groups, single lights, or Home
-Assistant entities. It takes over the job a Hue Bridge would do, for Friends of Hue (Zigbee Green
-Power), Hue, and any other Zigbee switch that reports an `action` or sensor that reports
-`occupancy`. Rules can wait a set time before running, so lamps go off some minutes after the last
-motion. A portal on port 80 links to both web interfaces.
+that binds battery switches, motion sensors and contact sensors to Zigbee2MQTT groups, single
+lights, or Home Assistant entities. It takes over the job a Hue Bridge would do, for Friends of Hue
+(Zigbee Green Power), Hue, and any other Zigbee switch that reports an `action`, motion sensor that
+reports `occupancy`, or door and window sensor that reports `contact`. Rules can wait a set time
+before running, so lamps go off some minutes after the last motion. A portal on port 80 links to
+both web interfaces.
 
 ```
 http://<host>/           portal with two entry points

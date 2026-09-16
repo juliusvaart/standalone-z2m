@@ -1,13 +1,6 @@
 const $ = (id) => document.getElementById(id);
 
-let snapshot = {
-  devices: [],
-  groups: [],
-  recent: [],
-  commands: [],
-  occupancyActions: [],
-  haConfigured: false,
-};
+let snapshot = { devices: [], groups: [], recent: [], commands: [], haConfigured: false };
 let haLights = [];
 let rules = [];
 
@@ -56,20 +49,23 @@ function renderDeviceList() {
 }
 
 function actionLabel(action) {
-  return snapshot.occupancyActions.find((a) => a.id === action)?.label || '';
+  for (const device of snapshot.devices) {
+    const match = device.actions?.find((a) => a.id === action);
+    if (match) return match.label;
+  }
+  return '';
 }
 
 function renderActionList() {
   const device = $('device').value.trim();
   const seen = snapshot.recent.filter((e) => !device || e.device === device).map((e) => e.action);
-  // A sensor never presses a button, so its actions have to be offered up front.
-  const sensors = snapshot.devices.filter((d) => d.exposes_occupancy);
-  const offerOccupancy = device
-    ? sensors.some((d) => d.friendly_name === device)
-    : sensors.length > 0;
-  const actions = [
-    ...new Set([...(offerOccupancy ? snapshot.occupancyActions.map((a) => a.id) : []), ...seen]),
-  ];
+  // Sensors report a state instead of a press, so their actions are offered up front
+  // rather than learnt from recent activity.
+  const offered = snapshot.devices
+    .filter((d) => !device || d.friendly_name === device)
+    .flatMap((d) => d.actions || [])
+    .map((a) => a.id);
+  const actions = [...new Set([...offered, ...seen])];
   $('action-list').innerHTML = actions
     .map((a) => `<option value="${a}">${actionLabel(a)}</option>`)
     .join('');

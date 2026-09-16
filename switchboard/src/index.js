@@ -11,13 +11,20 @@ const baseTopic = process.env.Z2M_BASE_TOPIC || 'zigbee2mqtt';
 const port = Number(process.env.PORT || 3000);
 const RECENT_LIMIT = 30;
 const MAX_DELAY_SECONDS = 86_400;
-const OCCUPANCY_ACTION = 'occupancy';
-const NO_OCCUPANCY_ACTION = 'no_occupancy';
-// Offered in the UI for devices that report occupancy, because a sensor has no
-// button press to learn the action name from.
-const OCCUPANCY_ACTIONS = [
-  { id: OCCUPANCY_ACTION, label: 'Motion detected' },
-  { id: NO_OCCUPANCY_ACTION, label: 'Motion cleared' },
+// Sensors report a state, not a press. Each boolean property becomes a pair of
+// action names, so a sensor rule stays device + action + command like any other.
+// Zigbee2MQTT reports `contact: true` for a closed door, hence the naming below.
+const BOOLEAN_TRIGGERS = [
+  {
+    property: 'occupancy',
+    true: { id: 'occupancy', label: 'Motion detected' },
+    false: { id: 'no_occupancy', label: 'Motion cleared' },
+  },
+  {
+    property: 'contact',
+    true: { id: 'closed', label: 'Closed' },
+    false: { id: 'open', label: 'Opened' },
+  },
 ];
 
 // Exposes are flat for simple devices and nested under `features` for composite ones.
@@ -29,6 +36,14 @@ function exposesProperty(definition, property) {
   return walk(definition?.exposes);
 }
 
+// A sensor never presses a button, so the UI has to be told which actions it can send.
+function sensorActions(definition) {
+  return BOOLEAN_TRIGGERS.filter((t) => exposesProperty(definition, t.property)).flatMap((t) => [
+    t.true,
+    t.false,
+  ]);
+}
+
 const state = {
   devices: [],
   groups: [],
@@ -36,9 +51,9 @@ const state = {
   mqttConnected: false,
 };
 
-// Motion sensors repeat their whole state on every report, so a rule may only run
-// when occupancy actually flips. Last seen value per device.
-const occupancy = new Map();
+// Sensors repeat their whole state on every report, so a rule may only run when the
+// value actually flips. Last seen value per `device:property`.
+const booleanStates = new Map();
 
 const client = mqtt.connect(process.env.MQTT_URL || 'mqtt://mosquitto:1883', {
   username: process.env.MQTT_USERNAME || undefined,
@@ -71,15 +86,19 @@ client.on('close', () => {
 
 client.on('error', (err) => console.error(`[mqtt] ${err.message}`));
 
-// Buttons report an `action` string; motion sensors report a boolean `occupancy`.
-// Both become one action name, so a rule stays device + action + command.
+// Buttons report an `action` string; sensors report a boolean state. Both become one
+// action name. A report that flips two properties at once fires only the first.
 function triggerFor(device, payload) {
   if (typeof payload.action === 'string' && payload.action !== '') return payload.action;
 
-  if (typeof payload.occupancy === 'boolean') {
-    if (occupancy.get(device) === payload.occupancy) return undefined;
-    occupancy.set(device, payload.occupancy);
-    return payload.occupancy ? OCCUPANCY_ACTION : NO_OCCUPANCY_ACTION;
+  for (const trigger of BOOLEAN_TRIGGERS) {
+    const value = payload[trigger.property];
+    if (typeof value !== 'boolean') continue;
+
+    const key = `${device}:${trigger.property}`;
+    if (booleanStates.get(key) === value) continue;
+    booleanStates.set(key, value);
+    return trigger[value].id;
   }
 
   return undefined;
@@ -109,8 +128,7 @@ client.on('message', (topic, buffer) => {
       .map((d) => ({
         friendly_name: d.friendly_name,
         description: d.definition?.description || d.definition?.model || d.type || '',
-        exposes_action: exposesProperty(d.definition, 'action'),
-        exposes_occupancy: exposesProperty(d.definition, 'occupancy'),
+        actions: sensorActions(d.definition),
         is_light: Boolean(d.definition?.exposes?.some((e) => e.type === 'light')),
       }))
       .sort((a, b) => a.friendly_name.localeCompare(b.friendly_name));
@@ -220,7 +238,6 @@ app.get('/api/state', (req, res) => {
     groups: state.groups,
     recent: state.recent,
     commands: COMMANDS,
-    occupancyActions: OCCUPANCY_ACTIONS,
   });
 });
 
