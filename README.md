@@ -25,6 +25,13 @@ argument:
 ./scripts/backup.sh /mnt/usb     # somewhere off the SD card
 ```
 
+Raspberry Pi OS Lite ships without `zip`, and the script stops with `zip is not installed: sudo apt
+install zip`. Install it once:
+
+```
+sudo apt install zip
+```
+
 It stops `zigbee2mqtt` first, because the device database is written continuously and
 `coordinator_backup.json` is flushed on shutdown, then starts it again — also when the copy fails.
 A stack that was already stopped stays stopped.
