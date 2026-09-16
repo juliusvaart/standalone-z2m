@@ -1,6 +1,13 @@
 const $ = (id) => document.getElementById(id);
 
-let snapshot = { devices: [], groups: [], recent: [], commands: [], haConfigured: false };
+let snapshot = {
+  devices: [],
+  groups: [],
+  recent: [],
+  commands: [],
+  occupancyActions: [],
+  haConfigured: false,
+};
 let haLights = [];
 let rules = [];
 
@@ -48,10 +55,24 @@ function renderDeviceList() {
     .join('');
 }
 
+function actionLabel(action) {
+  return snapshot.occupancyActions.find((a) => a.id === action)?.label || '';
+}
+
 function renderActionList() {
   const device = $('device').value.trim();
-  const actions = [...new Set(snapshot.recent.filter((e) => !device || e.device === device).map((e) => e.action))];
-  $('action-list').innerHTML = actions.map((a) => `<option value="${a}">`).join('');
+  const seen = snapshot.recent.filter((e) => !device || e.device === device).map((e) => e.action);
+  // A sensor never presses a button, so its actions have to be offered up front.
+  const sensors = snapshot.devices.filter((d) => d.exposes_occupancy);
+  const offerOccupancy = device
+    ? sensors.some((d) => d.friendly_name === device)
+    : sensors.length > 0;
+  const actions = [
+    ...new Set([...(offerOccupancy ? snapshot.occupancyActions.map((a) => a.id) : []), ...seen]),
+  ];
+  $('action-list').innerHTML = actions
+    .map((a) => `<option value="${a}">${actionLabel(a)}</option>`)
+    .join('');
 }
 
 function z2mOptions() {
@@ -102,11 +123,19 @@ function renderRecent() {
   list.innerHTML = snapshot.recent
     .map(
       (e, i) => `<li data-index="${i}">
-        <span><code>${e.device}</code> → <strong>${e.action}</strong></span>
+        <span><code>${e.device}</code> → <strong>${e.action}</strong>${
+          actionLabel(e.action) ? ` <span class="hint">${actionLabel(e.action)}</span>` : ''
+        }</span>
         <time>${new Date(e.at).toLocaleTimeString()}</time>
       </li>`,
     )
     .join('');
+}
+
+function delayLabel(seconds) {
+  if (seconds % 3600 === 0) return `${seconds / 3600} h`;
+  if (seconds % 60 === 0) return `${seconds / 60} min`;
+  return `${seconds} s`;
 }
 
 function targetLabel(rule) {
@@ -126,7 +155,9 @@ function renderRules() {
         <td>${r.name}</td>
         <td><code>${r.device}</code></td>
         <td><code>${r.action}</code></td>
-        <td>${snapshot.commands.find((c) => c.id === r.command)?.label || r.command}</td>
+        <td>${snapshot.commands.find((c) => c.id === r.command)?.label || r.command}${
+          r.delay ? `<br><span class="hint">after ${delayLabel(r.delay)} of no activity</span>` : ''
+        }</td>
         <td>${targetLabel(r)}</td>
         <td class="controls">
           <button class="small" data-test="${r.id}">Test</button>
@@ -159,6 +190,7 @@ function fillForm(rule, { id, name, title }) {
   $('target').value = rule.target.id;
   $('fallback').value = rule.fallback || '';
   $('step').value = rule.step ?? '';
+  $('delay').value = rule.delay ?? '';
   $('enabled').checked = rule.enabled !== false;
   $('form-title').textContent = title;
   $('cancel').hidden = false;
@@ -208,6 +240,7 @@ $('rule-form').addEventListener('submit', async (event) => {
     target: { kind: selectedKind(), id: $('target').value },
     fallback: $('fallback').value,
     step: $('step').value,
+    delay: $('delay').value,
     enabled: $('enabled').checked,
   };
   const id = $('rule-id').value;

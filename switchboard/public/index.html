@@ -10,7 +10,7 @@
 <header>
   <div>
     <h1>Switchboard</h1>
-    <p class="sub">Bind Friends of Hue and Hue switches to lights, groups or Home Assistant entities.</p>
+    <p class="sub">Bind Friends of Hue and Hue switches, and motion sensors, to lights, groups or Home Assistant entities.</p>
   </div>
   <div class="status">
     <span id="mqtt-status" class="pill">MQTT …</span>
@@ -30,13 +30,14 @@
       </label>
 
       <div class="row">
-        <label>Switch
+        <label>Switch or sensor
           <input id="device" list="device-list" placeholder="hue_dimmer_living_room" required>
           <datalist id="device-list"></datalist>
         </label>
         <label>Action
           <input id="action" list="action-list" placeholder="press_1" required>
           <datalist id="action-list"></datalist>
+          <span class="hint">Buttons report their own names. Motion sensors use <code>occupancy</code> and <code>no_occupancy</code>.</span>
         </label>
       </div>
 
@@ -63,9 +64,15 @@
         </label>
       </fieldset>
 
-      <label>Dim step <span class="hint" id="step-hint"></span>
-        <input id="step" type="number" min="1" placeholder="default">
-      </label>
+      <div class="row">
+        <label>Dim step <span class="hint" id="step-hint"></span>
+          <input id="step" type="number" min="1" placeholder="default">
+        </label>
+        <label>Delay <span class="hint">(seconds)</span>
+          <input id="delay" type="number" min="1" max="86400" placeholder="none">
+          <span class="hint">Waits before running. Any new activity from the same device cancels it, so <code>no_occupancy</code> → Off with 300 turns the lamps off five minutes after the last motion.</span>
+        </label>
+      </div>
 
       <label class="inline"><input type="checkbox" id="enabled" checked> Enabled</label>
 
@@ -79,8 +86,8 @@
   </section>
 
   <section class="panel">
-    <h2>Recent switch activity</h2>
-    <p class="hint">Press a button on the switch, then click the entry to fill the form.</p>
+    <h2>Recent switch and sensor activity</h2>
+    <p class="hint">Press a button, or walk past a motion sensor, then click the entry to fill the form.</p>
     <ul id="recent" class="recent"><li class="empty">Waiting for switch events…</li></ul>
   </section>
 
@@ -89,7 +96,7 @@
     <table id="rules">
       <thead>
         <tr>
-          <th>Name</th><th>Switch</th><th>Action</th><th>Command</th><th>Target</th><th></th>
+          <th>Name</th><th>Device</th><th>Action</th><th>Command</th><th>Target</th><th></th>
         </tr>
       </thead>
       <tbody></tbody>

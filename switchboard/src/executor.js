@@ -36,6 +36,9 @@ function z2mStep(rule) {
 
 export function createExecutor({ publishSet }) {
   const holds = new Map();
+  // Rules waiting out their delay, keyed by rule id. The next event from the same
+  // device cancels them, so motion returning before the delay is up keeps the light on.
+  const pending = new Map();
   // Targets whose hold is currently running over Zigbee2MQTT because Home
   // Assistant was down when the button went down. The release has to stop it there.
   const fallbackHolds = new Map();
@@ -124,10 +127,10 @@ export function createExecutor({ publishSet }) {
     // the Zigbee2MQTT move as well if the hold had already fallen back.
     if (command === 'dim_stop') {
       stopHold(key);
-      const pending = fallbackHolds.get(key);
-      if (!pending) return undefined;
+      const fallbackName = fallbackHolds.get(key);
+      if (!fallbackName) return undefined;
       fallbackHolds.delete(key);
-      return runZigbee2Mqtt(pending, 'dim_stop', z2mStep(rule));
+      return runZigbee2Mqtt(fallbackName, 'dim_stop', z2mStep(rule));
     }
 
     if (command === 'off') stopHold(key);
@@ -151,10 +154,39 @@ export function createExecutor({ publishSet }) {
     }
   }
 
+  // Events arrive per device, so a new one voids whatever that device had waiting.
+  function cancelPending(device) {
+    for (const [id, entry] of pending) {
+      if (entry.device !== device) continue;
+      clearTimeout(entry.timer);
+      pending.delete(id);
+    }
+  }
+
+  // Runs the rule, or waits out its delay first. Used for real events; the test
+  // button calls run() so the wiring can be checked without waiting.
+  function schedule(rule) {
+    const delayMs = Number.isFinite(rule.delay) && rule.delay > 0 ? rule.delay * 1000 : 0;
+    if (!delayMs) return run(rule);
+
+    const timer = setTimeout(() => {
+      pending.delete(rule.id);
+      run(rule).catch((err) => console.error(`[rule ${rule.id}] ${err.message}`));
+    }, delayMs);
+    pending.set(rule.id, { device: rule.device, timer });
+    return Promise.resolve();
+  }
+
   function stopAll() {
     for (const key of [...holds.keys()]) stopHold(key);
     fallbackHolds.clear();
   }
 
-  return { run, stopAll };
+  // Shutdown only: a delay is wall-clock intent, so it survives an MQTT reconnect.
+  function cancelAll() {
+    for (const entry of pending.values()) clearTimeout(entry.timer);
+    pending.clear();
+  }
+
+  return { run, schedule, cancelPending, stopAll, cancelAll };
 }
