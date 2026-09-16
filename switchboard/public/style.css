@@ -41,7 +41,7 @@ header {
 h1 { margin: 0; font-size: 22px; }
 h2 { margin: 0 0 14px; font-size: 16px; }
 .sub, .hint { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
-.status { display: flex; gap: 8px; align-items: center; }
+.status { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .pill {
   padding: 4px 10px;
   border: 1px solid var(--line);
@@ -68,6 +68,12 @@ main {
   border-radius: 12px;
 }
 .panel.wide { grid-column: 1 / -1; }
+/* The form is the busiest panel, so it takes two tracks once three of them fit.
+   Below that it stays one track, where a span would invent an extra column. */
+.panel.form { container-type: inline-size; }
+@media (min-width: 1060px) {
+  .panel.form { grid-column: span 2; }
+}
 label { display: block; margin-bottom: 14px; font-size: 13px; color: var(--muted); }
 label.inline { display: flex; align-items: center; gap: 8px; color: var(--fg); font-size: 14px; }
 input, select {
@@ -83,8 +89,32 @@ input, select {
 label.inline input { width: auto; margin: 0; }
 fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin: 0 0 14px; }
 legend { font-size: 13px; color: var(--muted); padding: 0 6px; }
-.radios { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 8px; }
-.row { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+/* Keyed to the panel, not the viewport: the columns only split when the panel
+   itself is wide, which is not the same thing on a tablet. */
+.form-columns { display: grid; gap: 16px; }
+@container (min-width: 620px) {
+  .form-columns { grid-template-columns: 1fr 1fr; }
+}
+fieldset.column { margin: 0; padding: 14px 16px 2px; }
+fieldset.column legend {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--fg);
+}
+.form-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.radios { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 8px; }
+.radios label.inline { margin-bottom: 0; }
+#kind-hint { margin-bottom: 14px; }
 .actions { display: flex; gap: 10px; }
 button {
   padding: 9px 16px;
@@ -98,6 +128,9 @@ button {
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 button.small { padding: 4px 9px; font-size: 12px; }
 button:hover { filter: brightness(1.08); }
+/* The bindings table has a floor width; let it scroll inside the panel instead of
+   pushing the whole page sideways on a phone. */
+.table-scroll { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 9px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); font-size: 14px; }
 th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
@@ -123,7 +156,4 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 .recent time { color: var(--muted); font-size: 12px; }
 .empty { color: var(--muted); font-size: 14px; }
 .error { color: var(--bad); font-size: 13px; }
-@media (max-width: 560px) {
-  .row { grid-template-columns: 1fr; }
-}
 .hint.warn { color: var(--bad); }

@@ -20,7 +20,7 @@
 </header>
 
 <main>
-  <section class="panel">
+  <section class="panel form">
     <h2 id="form-title">New binding</h2>
     <form id="rule-form">
       <input type="hidden" id="rule-id">
@@ -29,58 +29,63 @@
         <input id="name" placeholder="Living room · single press">
       </label>
 
-      <div class="row">
-        <label>Switch or sensor
-          <input id="device" list="device-list" placeholder="hue_dimmer_living_room" required>
-          <datalist id="device-list"></datalist>
-        </label>
-        <label>Action
-          <input id="action" list="action-list" placeholder="press_1" required>
-          <datalist id="action-list"></datalist>
-          <span class="hint">Buttons report their own names. Motion sensors use <code>occupancy</code> and <code>no_occupancy</code>, contact sensors <code>open</code> and <code>closed</code>.</span>
-        </label>
+      <div class="form-columns">
+        <fieldset class="column">
+          <legend>Binding</legend>
+          <label>Switch or sensor
+            <input id="device" list="device-list" placeholder="hue_dimmer_living_room" required>
+            <datalist id="device-list"></datalist>
+          </label>
+
+          <label>Action
+            <input id="action" list="action-list" placeholder="press_1" required>
+            <datalist id="action-list"></datalist>
+            <span class="hint">Buttons report their own names. Motion sensors use <code>occupancy</code> and <code>no_occupancy</code>, contact sensors <code>open</code> and <code>closed</code>.</span>
+          </label>
+
+          <label>Delay <span class="hint">(seconds)</span>
+            <input id="delay" type="number" min="1" max="86400" placeholder="none">
+            <span class="hint">Waits before running. Any new activity from the same device cancels it, so <code>no_occupancy</code> → Off with 300 turns the lamps off five minutes after the last motion.</span>
+          </label>
+        </fieldset>
+
+        <fieldset class="column">
+          <legend>Target</legend>
+          <label>Command
+            <select id="command"></select>
+          </label>
+
+          <div class="radios">
+            <label class="inline"><input type="radio" name="kind" value="ha" checked> Home Assistant entity</label>
+            <label class="inline"><input type="radio" name="kind" value="z2m"> Zigbee2MQTT group or light</label>
+          </div>
+          <p class="hint" id="kind-hint"></p>
+
+          <label>Entity, group or light
+            <input id="target" list="target-list" placeholder="light.living_room" required>
+            <datalist id="target-list"></datalist>
+          </label>
+
+          <label id="fallback-field">Fallback while Home Assistant is down
+            <input id="fallback" list="z2m-list" placeholder="living_room_group">
+            <datalist id="z2m-list"></datalist>
+            <span class="hint">Zigbee2MQTT group or light to drive directly if Home Assistant cannot be reached.</span>
+          </label>
+
+          <label>Dim step <span class="hint" id="step-hint"></span>
+            <input id="step" type="number" min="1" placeholder="default">
+          </label>
+        </fieldset>
       </div>
-
-      <label>Command
-        <select id="command"></select>
-      </label>
-
-      <fieldset>
-        <legend>Target</legend>
-        <div class="radios">
-          <label class="inline"><input type="radio" name="kind" value="ha" checked> Home Assistant entity</label>
-          <label class="inline"><input type="radio" name="kind" value="z2m"> Zigbee2MQTT group or light</label>
-        </div>
-        <p class="hint" id="kind-hint"></p>
-        <label>
-          <input id="target" list="target-list" placeholder="light.living_room" required>
-          <datalist id="target-list"></datalist>
-        </label>
-
-        <label id="fallback-field">Fallback while Home Assistant is down
-          <input id="fallback" list="z2m-list" placeholder="living_room_group">
-          <datalist id="z2m-list"></datalist>
-          <span class="hint">Zigbee2MQTT group or light to drive directly if Home Assistant cannot be reached.</span>
-        </label>
-      </fieldset>
-
-      <div class="row">
-        <label>Dim step <span class="hint" id="step-hint"></span>
-          <input id="step" type="number" min="1" placeholder="default">
-        </label>
-        <label>Delay <span class="hint">(seconds)</span>
-          <input id="delay" type="number" min="1" max="86400" placeholder="none">
-          <span class="hint">Waits before running. Any new activity from the same device cancels it, so <code>no_occupancy</code> → Off with 300 turns the lamps off five minutes after the last motion.</span>
-        </label>
-      </div>
-
-      <label class="inline"><input type="checkbox" id="enabled" checked> Enabled</label>
 
       <p id="form-error" class="error" hidden></p>
 
-      <div class="actions">
-        <button type="submit" class="primary">Save binding</button>
-        <button type="button" id="cancel" hidden>Cancel</button>
+      <div class="form-footer">
+        <label class="inline"><input type="checkbox" id="enabled" checked> Enabled</label>
+        <div class="actions">
+          <button type="submit" class="primary">Save binding</button>
+          <button type="button" id="cancel" hidden>Cancel</button>
+        </div>
       </div>
     </form>
   </section>
@@ -93,6 +98,7 @@
 
   <section class="panel wide">
     <h2>Bindings</h2>
+    <div class="table-scroll">
     <table id="rules">
       <thead>
         <tr>
@@ -101,6 +107,7 @@
       </thead>
       <tbody></tbody>
     </table>
+    </div>
     <p id="rules-empty" class="empty">No bindings yet.</p>
   </section>
 </main>
