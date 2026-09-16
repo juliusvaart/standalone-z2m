@@ -325,6 +325,37 @@ document.querySelector('#rules tbody').addEventListener('click', async (event) =
   }
 });
 
+/* Theme. The <head> script already applied the stored preference before the first
+   paint; this only owns the button that cycles it. Auto stores nothing, so the
+   stylesheet's prefers-color-scheme rule keeps following the OS, live. */
+const THEMES = ['auto', 'light', 'dark'];
+const THEME_NAMES = { auto: 'Auto', light: 'Light', dark: 'Dark' };
+
+function storedTheme() {
+  try {
+    const pref = localStorage.getItem('theme');
+    return THEMES.includes(pref) ? pref : 'auto';
+  } catch (err) {
+    return 'auto';
+  }
+}
+
+function applyTheme(pref) {
+  if (pref === 'auto') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = pref;
+  try {
+    if (pref === 'auto') localStorage.removeItem('theme');
+    else localStorage.setItem('theme', pref);
+  } catch (err) {}
+  $('theme').textContent = `Theme: ${THEME_NAMES[pref]}`;
+}
+
+$('theme').addEventListener('click', () => {
+  applyTheme(THEMES[(THEMES.indexOf(storedTheme()) + 1) % THEMES.length]);
+});
+
+applyTheme(storedTheme());
+
 (async function init() {
   await refreshState();
   await loadHaLights();

@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Switchboard</title>
 <link rel="stylesheet" href="style.css">
+<script>
+  // Stamped before the first paint so an explicit theme never flashes the other one.
+  try {
+    var pref = localStorage.getItem('theme');
+    if (pref === 'light' || pref === 'dark') document.documentElement.dataset.theme = pref;
+  } catch (err) {}
+</script>
 </head>
 <body>
 <header>
@@ -16,6 +23,7 @@
     <span id="mqtt-status" class="pill">MQTT …</span>
     <span id="ha-status" class="pill">Home Assistant …</span>
     <a class="pill link" href="/">Portal</a>
+    <button type="button" id="theme" class="pill"></button>
   </div>
 </header>
 

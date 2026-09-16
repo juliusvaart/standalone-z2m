@@ -1,5 +1,5 @@
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --bg: #f4f5f7;
   --card: #ffffff;
   --fg: #16181d;
@@ -9,8 +9,14 @@
   --ok: #2e7d4f;
   --bad: #b4372f;
 }
+/* The OS decides unless the toggle has pinned a theme. color-scheme has to be a
+   concrete value in each state, otherwise native selects and scrollbars keep
+   following the OS and desync from an explicit choice. The dark tokens are
+   written twice because a media query and an attribute selector cannot share a
+   rule. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg: #14161a;
     --card: #1d2026;
     --fg: #edeff3;
@@ -20,6 +26,17 @@
     --ok: #59b77f;
     --bad: #e2685c;
   }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #14161a;
+  --card: #1d2026;
+  --fg: #edeff3;
+  --muted: #9aa1ad;
+  --line: #2c313a;
+  --accent: #6d9bf0;
+  --ok: #59b77f;
+  --bad: #e2685c;
 }
 * { box-sizing: border-box; }
 body {
@@ -53,6 +70,7 @@ h2 { margin: 0 0 14px; font-size: 16px; }
 .pill.ok { color: var(--ok); border-color: currentColor; }
 .pill.bad { color: var(--bad); border-color: currentColor; }
 .pill.link { color: var(--accent); text-decoration: none; }
+button.pill { background: none; font: inherit; font-size: 12px; cursor: pointer; }
 main {
   display: grid;
   gap: 20px;
