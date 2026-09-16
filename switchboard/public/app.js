@@ -142,27 +142,58 @@ function targetLabel(rule) {
   return `HA · ${rule.target.id}${fallback}`;
 }
 
+// One block per switch or sensor, because a binding is only readable next to the
+// other bindings of the same device.
+function groupByDevice(list) {
+  const groups = new Map();
+  for (const rule of list) {
+    if (!groups.has(rule.device)) groups.set(rule.device, []);
+    groups.get(rule.device).push(rule);
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([device, deviceRules]) => [
+      device,
+      [...deviceRules].sort((a, b) => a.action.localeCompare(b.action) || a.name.localeCompare(b.name)),
+    ]);
+}
+
+function deviceHeader(device, count) {
+  const known = snapshot.devices.find((d) => d.friendly_name === device);
+  const detail = [known?.description, `${count} ${count === 1 ? 'binding' : 'bindings'}`]
+    .filter(Boolean)
+    .join(' · ');
+  // A device that was removed from the network still has its bindings here.
+  const missing = known ? '' : ' <span class="hint warn">not paired</span>';
+  return `<tr class="group">
+    <td colspan="5"><code>${device}</code>${missing} <span class="hint">${detail}</span></td>
+  </tr>`;
+}
+
+function ruleRow(r) {
+  return `<tr class="${r.enabled === false ? 'disabled' : ''}">
+    <td>${r.name}</td>
+    <td><code>${r.action}</code>${
+      actionLabel(r.action) ? `<br><span class="hint">${actionLabel(r.action)}</span>` : ''
+    }</td>
+    <td>${snapshot.commands.find((c) => c.id === r.command)?.label || r.command}${
+      r.delay ? `<br><span class="hint">after ${delayLabel(r.delay)} of no activity</span>` : ''
+    }</td>
+    <td>${targetLabel(r)}</td>
+    <td class="controls">
+      <button class="small" data-test="${r.id}">Test</button>
+      <button class="small" data-edit="${r.id}">Edit</button>
+      <button class="small" data-duplicate="${r.id}">Duplicate</button>
+      <button class="small" data-delete="${r.id}">Delete</button>
+    </td>
+  </tr>`;
+}
+
 function renderRules() {
   const body = document.querySelector('#rules tbody');
   $('rules-empty').hidden = rules.length > 0;
-  body.innerHTML = rules
-    .map(
-      (r) => `<tr class="${r.enabled === false ? 'disabled' : ''}">
-        <td>${r.name}</td>
-        <td><code>${r.device}</code></td>
-        <td><code>${r.action}</code></td>
-        <td>${snapshot.commands.find((c) => c.id === r.command)?.label || r.command}${
-          r.delay ? `<br><span class="hint">after ${delayLabel(r.delay)} of no activity</span>` : ''
-        }</td>
-        <td>${targetLabel(r)}</td>
-        <td class="controls">
-          <button class="small" data-test="${r.id}">Test</button>
-          <button class="small" data-edit="${r.id}">Edit</button>
-          <button class="small" data-duplicate="${r.id}">Duplicate</button>
-          <button class="small" data-delete="${r.id}">Delete</button>
-        </td>
-      </tr>`,
-    )
+  body.innerHTML = groupByDevice(rules)
+    .map(([device, deviceRules]) => deviceHeader(device, deviceRules.length) + deviceRules.map(ruleRow).join(''))
     .join('');
 }
 
