@@ -56,8 +56,16 @@ function renderActionList() {
 
 function z2mOptions() {
   return [
-    ...snapshot.groups.map((g) => ({ value: g.friendly_name, label: `Group · ${g.members} members` })),
-    ...snapshot.devices.filter((d) => d.is_light).map((d) => ({ value: d.friendly_name, label: d.description })),
+    ...snapshot.groups.map((g) => ({
+      value: g.friendly_name,
+      label: `${g.friendly_name} · group of ${g.members}`,
+    })),
+    ...snapshot.devices
+      .filter((d) => d.is_light)
+      .map((d) => ({
+        value: d.friendly_name,
+        label: d.description ? `${d.friendly_name} · ${d.description}` : d.friendly_name,
+      })),
   ];
 }
 
@@ -123,6 +131,7 @@ function renderRules() {
         <td class="controls">
           <button class="small" data-test="${r.id}">Test</button>
           <button class="small" data-edit="${r.id}">Edit</button>
+          <button class="small" data-duplicate="${r.id}">Duplicate</button>
           <button class="small" data-delete="${r.id}">Delete</button>
         </td>
       </tr>`,
@@ -139,9 +148,9 @@ function resetForm() {
   renderTargetList();
 }
 
-function editRule(rule) {
-  $('rule-id').value = rule.id;
-  $('name').value = rule.name;
+function fillForm(rule, { id, name, title }) {
+  $('rule-id').value = id;
+  $('name').value = name;
   $('device').value = rule.device;
   $('action').value = rule.action;
   $('command').value = rule.command;
@@ -151,9 +160,17 @@ function editRule(rule) {
   $('fallback').value = rule.fallback || '';
   $('step').value = rule.step ?? '';
   $('enabled').checked = rule.enabled !== false;
-  $('form-title').textContent = 'Edit binding';
+  $('form-title').textContent = title;
   $('cancel').hidden = false;
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function editRule(rule) {
+  fillForm(rule, { id: rule.id, name: rule.name, title: 'Edit binding' });
+}
+
+function duplicateRule(rule) {
+  fillForm(rule, { id: '', name: `${rule.name} copy`, title: 'Duplicate binding' });
 }
 
 async function loadHaLights() {
@@ -230,9 +247,10 @@ $('recent').addEventListener('click', (event) => {
 document.querySelector('#rules tbody').addEventListener('click', async (event) => {
   const button = event.target.closest('button');
   if (!button) return;
-  const { test, edit, delete: remove } = button.dataset;
+  const { test, edit, duplicate, delete: remove } = button.dataset;
   try {
     if (edit) editRule(rules.find((r) => r.id === edit));
+    if (duplicate) duplicateRule(rules.find((r) => r.id === duplicate));
     if (test) {
       await api(`rules/${test}/test`, { method: 'POST' });
       button.textContent = 'Sent';
