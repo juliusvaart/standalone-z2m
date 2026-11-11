@@ -1,5 +1,12 @@
 const $ = (id) => document.getElementById(id);
 
+// Every name below comes from a user or a device and ends up in innerHTML.
+const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ESCAPES[c]);
+
+// Matches the breakpoint in style.css below which only one panel shows at a time.
+const phone = window.matchMedia('(max-width: 719px)');
+
 let snapshot = { devices: [], groups: [], recent: [], commands: [], haConfigured: false };
 let haLights = [];
 let rules = [];
@@ -16,35 +23,34 @@ function selectedKind() {
   return document.querySelector('input[name="kind"]:checked').value;
 }
 
+// Long text on desktop, short text on a phone; the long one stays reachable as a tooltip.
+function setPill(el, state, full, short) {
+  el.className = `pill ${state}`;
+  el.title = full;
+  el.innerHTML = `<span class="full">${esc(full)}</span><span class="short">${esc(short)}</span>`;
+}
+
 function renderStatus() {
-  const mqtt = $('mqtt-status');
-  mqtt.textContent = snapshot.mqttConnected ? 'MQTT connected' : 'MQTT offline';
-  mqtt.className = `pill ${snapshot.mqttConnected ? 'ok' : 'bad'}`;
+  const mqtt = snapshot.mqttConnected;
+  setPill($('mqtt-status'), mqtt ? 'ok' : 'bad', mqtt ? 'MQTT connected' : 'MQTT offline', 'MQTT');
 
   const ha = $('ha-status');
-  if (!snapshot.haConfigured) {
-    ha.textContent = 'Home Assistant not configured';
-    ha.className = 'pill';
-  } else if (snapshot.haReachable) {
-    ha.textContent = 'Home Assistant linked';
-    ha.className = 'pill ok';
-  } else {
-    ha.textContent = 'Home Assistant unreachable · fallbacks active';
-    ha.className = 'pill bad';
-  }
+  if (!snapshot.haConfigured) setPill(ha, '', 'Home Assistant not configured', 'No HA');
+  else if (snapshot.haReachable) setPill(ha, 'ok', 'Home Assistant linked', 'HA');
+  else setPill(ha, 'bad', 'Home Assistant unreachable · fallbacks active', 'HA down');
 }
 
 function renderCommands() {
   const select = $('command');
   if (select.options.length === snapshot.commands.length) return;
   select.innerHTML = snapshot.commands
-    .map((c) => `<option value="${c.id}">${c.label}</option>`)
+    .map((c) => `<option value="${esc(c.id)}">${esc(c.label)}</option>`)
     .join('');
 }
 
 function renderDeviceList() {
   $('device-list').innerHTML = snapshot.devices
-    .map((d) => `<option value="${d.friendly_name}">${d.description}</option>`)
+    .map((d) => `<option value="${esc(d.friendly_name)}">${esc(d.description)}</option>`)
     .join('');
 }
 
@@ -67,7 +73,7 @@ function renderActionList() {
     .map((a) => a.id);
   const actions = [...new Set([...offered, ...seen])];
   $('action-list').innerHTML = actions
-    .map((a) => `<option value="${a}">${actionLabel(a)}</option>`)
+    .map((a) => `<option value="${esc(a)}">${esc(actionLabel(a))}</option>`)
     .join('');
 }
 
@@ -86,24 +92,25 @@ function z2mOptions() {
   ];
 }
 
+const optionList = (options) =>
+  options.map((o) => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('');
+
 function renderTargetList() {
   const hint = $('kind-hint');
   const stepHint = $('step-hint');
   const options = z2mOptions();
-  $('z2m-list').innerHTML = options.map((o) => `<option value="${o.value}">${o.label}</option>`).join('');
+  $('z2m-list').innerHTML = optionList(options);
   $('fallback-field').hidden = selectedKind() !== 'ha';
 
   if (selectedKind() === 'ha') {
-    $('target-list').innerHTML = haLights
-      .map((l) => `<option value="${l.entity_id}">${l.name}</option>`)
-      .join('');
+    $('target-list').innerHTML = optionList(haLights.map((l) => ({ value: l.entity_id, label: l.name })));
     $('target').placeholder = 'light.living_room';
     hint.textContent = snapshot.haConfigured
       ? 'Commands run through Home Assistant, so Adaptive Lighting stays in charge of brightness and colour temperature.'
       : 'Set HA_URL and HA_TOKEN in .env to use Home Assistant targets.';
     stepHint.textContent = '(percent, default 12)';
   } else {
-    $('target-list').innerHTML = options.map((o) => `<option value="${o.value}">${o.label}</option>`).join('');
+    $('target-list').innerHTML = optionList(options);
     $('target').placeholder = 'living_room_group';
     hint.textContent = 'Commands go straight to Zigbee2MQTT. Works without Home Assistant, but Adaptive Lighting may treat the change as manual control.';
     stepHint.textContent = '(0-254, default 40)';
@@ -119,13 +126,26 @@ function renderRecent() {
   list.innerHTML = snapshot.recent
     .map(
       (e, i) => `<li data-index="${i}">
-        <span><code>${e.device}</code> → <strong>${e.action}</strong>${
-          actionLabel(e.action) ? ` <span class="hint">${actionLabel(e.action)}</span>` : ''
+        <span><code>${esc(e.device)}</code> → <strong>${esc(e.action)}</strong>${
+          actionLabel(e.action) ? ` <span class="hint">${esc(actionLabel(e.action))}</span>` : ''
         }</span>
         <time>${new Date(e.at).toLocaleTimeString()}</time>
       </li>`,
     )
     .join('');
+}
+
+// Activity the phone user has not looked at yet. Timestamps are ISO strings, so
+// they compare as text. The page starts with nothing unseen.
+let recentSeenAt;
+
+function renderRecentBadge() {
+  const latest = snapshot.recent[0]?.at || '';
+  if (recentSeenAt === undefined || $('main').dataset.view === 'recent') recentSeenAt = latest;
+  const unseen = snapshot.recent.filter((e) => e.at > recentSeenAt).length;
+  const badge = $('recent-badge');
+  badge.hidden = unseen === 0;
+  badge.textContent = unseen;
 }
 
 function delayLabel(seconds) {
@@ -135,11 +155,11 @@ function delayLabel(seconds) {
 }
 
 function targetLabel(rule) {
-  if (rule.target.kind !== 'ha') return `Z2M · ${rule.target.id}`;
+  if (rule.target.kind !== 'ha') return `Z2M · ${esc(rule.target.id)}`;
   const fallback = rule.fallback
-    ? `<br><span class="hint">fallback → ${rule.fallback}</span>`
+    ? `<br><span class="hint">fallback → ${esc(rule.fallback)}</span>`
     : '<br><span class="hint warn">no fallback</span>';
-  return `HA · ${rule.target.id}${fallback}`;
+  return `HA · ${esc(rule.target.id)}${fallback}`;
 }
 
 // One block per switch or sensor, because a binding is only readable next to the
@@ -166,25 +186,29 @@ function deviceHeader(device, count) {
   // A device that was removed from the network still has its bindings here.
   const missing = known ? '' : ' <span class="hint warn">not paired</span>';
   return `<tr class="group">
-    <td colspan="5"><code>${device}</code>${missing} <span class="hint">${detail}</span></td>
+    <td colspan="5"><code>${esc(device)}</code>${missing} <span class="hint">${esc(detail)}</span></td>
   </tr>`;
 }
 
+// Cell contents sit in a div so the phone layout can put the data-label beside them
+// as a two-column grid without every <br> and <span> becoming a grid item.
 function ruleRow(r) {
+  const id = esc(r.id);
+  const command = snapshot.commands.find((c) => c.id === r.command)?.label || r.command;
   return `<tr class="${r.enabled === false ? 'disabled' : ''}">
-    <td>${r.name}</td>
-    <td><code>${r.action}</code>${
-      actionLabel(r.action) ? `<br><span class="hint">${actionLabel(r.action)}</span>` : ''
-    }</td>
-    <td>${snapshot.commands.find((c) => c.id === r.command)?.label || r.command}${
+    <td class="name">${esc(r.name)}</td>
+    <td data-label="Action"><div><code>${esc(r.action)}</code>${
+      actionLabel(r.action) ? `<br><span class="hint">${esc(actionLabel(r.action))}</span>` : ''
+    }</div></td>
+    <td data-label="Command"><div>${esc(command)}${
       r.delay ? `<br><span class="hint">after ${delayLabel(r.delay)} of no activity</span>` : ''
-    }</td>
-    <td>${targetLabel(r)}</td>
+    }</div></td>
+    <td data-label="Target"><div>${targetLabel(r)}</div></td>
     <td class="controls">
-      <button class="small" data-test="${r.id}">Test</button>
-      <button class="small" data-edit="${r.id}">Edit</button>
-      <button class="small" data-duplicate="${r.id}">Duplicate</button>
-      <button class="small" data-delete="${r.id}">Delete</button>
+      <button class="small" data-test="${id}">Test</button>
+      <button class="small" data-edit="${id}">Edit</button>
+      <button class="small" data-duplicate="${id}">Duplicate</button>
+      <button class="small" data-delete="${id}">Delete</button>
     </td>
   </tr>`;
 }
@@ -197,16 +221,32 @@ function renderRules() {
     .join('');
 }
 
+// Only matters on a phone; from the breakpoint up every panel is visible regardless.
+function showView(view) {
+  const main = $('main');
+  if (main.dataset.view === view) return;
+  main.dataset.view = view;
+  for (const tab of document.querySelectorAll('.tabs button')) {
+    if (tab.dataset.view === view) tab.setAttribute('aria-current', 'page');
+    else tab.removeAttribute('aria-current');
+  }
+  if (view === 'recent') renderRecentBadge();
+  if (phone.matches) window.scrollTo(0, 0);
+}
+
 function resetForm() {
   $('rule-id').value = '';
   $('rule-form').reset();
   $('form-title').textContent = 'New binding';
+  $('tab-form').textContent = 'New';
   $('cancel').hidden = true;
   $('form-error').hidden = true;
   renderTargetList();
 }
 
 function fillForm(rule, { id, name, title }) {
+  showView('form');
+  $('tab-form').textContent = id ? 'Edit' : 'New';
   $('rule-id').value = id;
   $('name').value = name;
   $('device').value = rule.device;
@@ -249,6 +289,7 @@ async function refreshState() {
   renderDeviceList();
   renderActionList();
   renderRecent();
+  renderRecentBadge();
   renderTargetList();
 }
 
@@ -279,13 +320,21 @@ $('rule-form').addEventListener('submit', async (event) => {
     });
     resetForm();
     await refreshRules();
+    showView('rules');
   } catch (err) {
     $('form-error').textContent = err.message;
     $('form-error').hidden = false;
   }
 });
 
-$('cancel').addEventListener('click', resetForm);
+$('cancel').addEventListener('click', () => {
+  resetForm();
+  showView('rules');
+});
+document.querySelector('.tabs').addEventListener('click', (event) => {
+  const tab = event.target.closest('button[data-view]');
+  if (tab) showView(tab.dataset.view);
+});
 $('device').addEventListener('input', renderActionList);
 for (const radio of document.querySelectorAll('input[name="kind"]')) {
   radio.addEventListener('change', () => {
@@ -299,6 +348,7 @@ $('recent').addEventListener('click', (event) => {
   const li = event.target.closest('li[data-index]');
   if (!li) return;
   const entry = snapshot.recent[Number(li.dataset.index)];
+  showView('form');
   $('device').value = entry.device;
   $('action').value = entry.action;
   renderActionList();
@@ -347,7 +397,7 @@ function applyTheme(pref) {
     if (pref === 'auto') localStorage.removeItem('theme');
     else localStorage.setItem('theme', pref);
   } catch (err) {}
-  $('theme').textContent = `Theme: ${THEME_NAMES[pref]}`;
+  setPill($('theme'), '', `Theme: ${THEME_NAMES[pref]}`, THEME_NAMES[pref]);
 }
 
 $('theme').addEventListener('click', () => {

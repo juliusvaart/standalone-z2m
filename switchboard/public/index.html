@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Switchboard</title>
 <link rel="stylesheet" href="style.css">
 <script>
@@ -21,14 +21,21 @@
   </div>
   <div class="status">
     <span id="mqtt-status" class="pill">MQTT …</span>
-    <span id="ha-status" class="pill">Home Assistant …</span>
+    <span id="ha-status" class="pill">HA …</span>
     <a class="pill link" href="/">Portal</a>
     <button type="button" id="theme" class="pill"></button>
   </div>
 </header>
 
-<main>
-  <section class="panel form">
+<!-- Phones show one panel at a time; from 720px up every panel is visible and this bar is hidden. -->
+<nav class="tabs" aria-label="Sections">
+  <button type="button" data-view="rules" aria-current="page">Bindings</button>
+  <button type="button" data-view="form" id="tab-form">New</button>
+  <button type="button" data-view="recent">Activity <span id="recent-badge" class="badge" hidden></span></button>
+</nav>
+
+<main id="main" data-view="rules">
+  <section class="panel form" data-panel="form">
     <h2 id="form-title">New binding</h2>
     <form id="rule-form">
       <input type="hidden" id="rule-id">
@@ -41,20 +48,32 @@
         <fieldset class="column">
           <legend>Binding</legend>
           <label>Switch or sensor
-            <input id="device" list="device-list" placeholder="hue_dimmer_living_room" required>
+            <input id="device" list="device-list" placeholder="hue_dimmer_living_room" required
+                   autocapitalize="off" autocorrect="off" spellcheck="false">
             <datalist id="device-list"></datalist>
           </label>
 
-          <label>Action
-            <input id="action" list="action-list" placeholder="press_1" required>
-            <datalist id="action-list"></datalist>
-            <span class="hint">Buttons report their own names. Motion sensors use <code>occupancy</code> and <code>no_occupancy</code>, contact sensors <code>open</code> and <code>closed</code>.</span>
-          </label>
+          <div class="field">
+            <label>Action
+              <input id="action" list="action-list" placeholder="press_1" required
+                     autocapitalize="off" autocorrect="off" spellcheck="false">
+              <datalist id="action-list"></datalist>
+            </label>
+            <details class="hint">
+              <summary>Which actions are there?</summary>
+              Buttons report their own names. Motion sensors use <code>occupancy</code> and <code>no_occupancy</code>, contact sensors <code>open</code> and <code>closed</code>.
+            </details>
+          </div>
 
-          <label>Delay <span class="hint">(seconds)</span>
-            <input id="delay" type="number" min="1" max="86400" placeholder="none">
-            <span class="hint">Waits before running. Any new activity from the same device cancels it, so <code>no_occupancy</code> → Off with 300 turns the lamps off five minutes after the last motion.</span>
-          </label>
+          <div class="field">
+            <label>Delay <span class="hint">(seconds)</span>
+              <input id="delay" type="number" inputmode="numeric" min="1" max="86400" placeholder="none">
+            </label>
+            <details class="hint">
+              <summary>How does the delay work?</summary>
+              Waits before running. Any new activity from the same device cancels it, so <code>no_occupancy</code> → Off with 300 turns the lamps off five minutes after the last motion.
+            </details>
+          </div>
         </fieldset>
 
         <fieldset class="column">
@@ -70,18 +89,20 @@
           <p class="hint" id="kind-hint"></p>
 
           <label>Entity, group or light
-            <input id="target" list="target-list" placeholder="light.living_room" required>
+            <input id="target" list="target-list" placeholder="light.living_room" required
+                   autocapitalize="off" autocorrect="off" spellcheck="false">
             <datalist id="target-list"></datalist>
           </label>
 
           <label id="fallback-field">Fallback while Home Assistant is down
-            <input id="fallback" list="z2m-list" placeholder="living_room_group">
+            <input id="fallback" list="z2m-list" placeholder="living_room_group"
+                   autocapitalize="off" autocorrect="off" spellcheck="false">
             <datalist id="z2m-list"></datalist>
             <span class="hint">Zigbee2MQTT group or light to drive directly if Home Assistant cannot be reached.</span>
           </label>
 
           <label>Dim step <span class="hint" id="step-hint"></span>
-            <input id="step" type="number" min="1" placeholder="default">
+            <input id="step" type="number" inputmode="numeric" min="1" placeholder="default">
           </label>
         </fieldset>
       </div>
@@ -98,13 +119,13 @@
     </form>
   </section>
 
-  <section class="panel">
+  <section class="panel" data-panel="recent">
     <h2>Recent switch and sensor activity</h2>
-    <p class="hint">Press a button, walk past a motion sensor, or open a door, then click the entry to fill the form.</p>
+    <p class="hint">Press a button, walk past a motion sensor, or open a door, then tap the entry to fill the form.</p>
     <ul id="recent" class="recent"><li class="empty">Waiting for switch events…</li></ul>
   </section>
 
-  <section class="panel wide">
+  <section class="panel wide" data-panel="rules">
     <h2>Bindings</h2>
     <div class="table-scroll">
     <table id="rules">
