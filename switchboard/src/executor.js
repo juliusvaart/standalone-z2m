@@ -136,6 +136,7 @@ export function createExecutor({ publishSet }) {
     if (command === 'off') stopHold(key);
 
     try {
+      await ha.assertAvailable(target.id);
       const result = await runHomeAssistant(target.id, command, haStep(rule));
       if (HOLD_COMMANDS.has(command)) {
         fallbackHolds.delete(key);

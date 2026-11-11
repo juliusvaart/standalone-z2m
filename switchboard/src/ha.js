@@ -1,7 +1,7 @@
 const baseUrl = (process.env.HA_URL || '').replace(/\/+$/, '');
 const token = process.env.HA_TOKEN || '';
 
-const REQUEST_TIMEOUT_MS = 4000;
+const REQUEST_TIMEOUT_MS = 2000;
 // After a network failure, stop dialling Home Assistant for a while so a button
 // press falls through to the Zigbee2MQTT path immediately instead of waiting.
 const UNREACHABLE_COOLDOWN_MS = 30_000;
@@ -65,6 +65,16 @@ export async function entityExists(entityId) {
   } catch {
     return null;
   }
+}
+
+// While Home Assistant starts up, its API answers long before integrations have loaded
+// their entities, and a service call for a missing or unavailable entity still answers
+// 200 while doing nothing. Throwing here lets the caller fall back instead. Home
+// Assistant itself is reachable, so this must not trip the unreachable cooldown.
+export async function assertAvailable(entityId) {
+  const state = await request(`/api/states/${encodeURIComponent(entityId)}`, {}, { allowMissing: true });
+  if (state === null) throw new Error(`${entityId} is not loaded in Home Assistant yet`);
+  if (state.state === 'unavailable') throw new Error(`${entityId} is unavailable in Home Assistant`);
 }
 
 export function callService(domain, service, data) {
